@@ -1,20 +1,14 @@
-
+BUF_LEN equ 4
+    
 section .data
-    text db "Hello, World!", 0
-    exec_p db "/bin/suko", 0
-    argv0 db "/bin/suko", 0
-    argv dq argv0, text, 0x0
-
     endln db 10
-    env0 db "PATH=/bin", 0
-    env dq env0, 0x0
 
 section .bss
     stdata resb 4096
+    cbbuf resb 8
    
 section .text
     global _start
-
     
 _start:
 
@@ -22,7 +16,7 @@ _read:
     mov rax, 0
     mov rdi, 0
     mov rsi, stdata
-    mov rdx, 4096
+    mov rdx, BUF_LEN
     syscall
 
     mov rbx, stdata
@@ -31,8 +25,29 @@ _len:
     inc rbx
     mov cl, [rbx]
     cmp cl, 10
-    jne _len 
+    je _cleanbuf
+    mov rdx, BUF_LEN
+    add rdx, stdata
+    cmp rbx, rdx
+    jl _len
     
+_cleanbuf:
+    mov rdx, rbx
+    sub rdx, stdata
+    cmp rdx, BUF_LEN
+    jl _init_rev
+
+_cbloop:
+    mov rax, 0
+    mov rdi, 0
+    mov rsi, cbbuf
+    mov rdx, 1
+    syscall
+
+    cmp byte [cbbuf], 10
+    jne _cbloop
+
+_init_rev:  
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
@@ -42,7 +57,7 @@ _rev:
     mov rsi, rbx
     syscall
     cmp rbx, stdata
-    jne _rev
+    jge _rev
 
     
     mov rsi, endln
