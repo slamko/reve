@@ -1,10 +1,11 @@
-BUF_LEN equ 4
+BUF_LEN equ 4096
     
 section .data
     endln db 10
 
 section .bss
-    stdata resb 4096
+    stdata resb BUF_LEN
+    revbuf resb BUF_LEN
     cbbuf resb 8
    
 section .text
@@ -50,16 +51,28 @@ _cbloop:
 _init_rev:  
     mov rax, 1
     mov rdi, 1
-    mov rdx, 1
+    mov rdx, rbx
+    sub rdx, stdata
+    mov rcx, revbuf
+    dec rcx
 
 _rev:
     dec rbx
-    mov rsi, rbx
-    syscall
+    inc rcx
+
+    mov rsi, [rbx]
+    mov [rcx], rsi
     cmp rbx, stdata
     jge _rev
 
-    
+    inc rcx
+    mov byte [rcx], 0
+    mov rsi, revbuf
+    syscall
+
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, 1
     mov rsi, endln
     syscall
     
