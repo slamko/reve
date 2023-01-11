@@ -10,12 +10,27 @@ section .bss
    
 section .text
     global _start
+
+_sys_write_init:
+    mov rax, 1
+    mov rdi, 1
+    ret
+
+_sys_read_init:
+    mov rax, 0
+    mov rdi, 0
+    ret
+
+_exit:
+    mov rax, 60
+    mov rdi, 0
+    syscall
+    ret
     
 _start:
 
 _read:  
-    mov rax, 0
-    mov rdi, 0
+    call _sys_read_init
     mov rsi, stdata
     mov rdx, BUF_LEN
     syscall
@@ -39,8 +54,7 @@ _cleanbuf:
     jl _init_rev
 
 _cbloop:
-    mov rax, 0
-    mov rdi, 0
+    call _sys_read_init
     mov rsi, cbbuf
     mov rdx, 1
     syscall
@@ -49,10 +63,10 @@ _cbloop:
     jne _cbloop
 
 _init_rev:  
-    mov rax, 1
-    mov rdi, 1
+    call _sys_write_init
     mov rdx, rbx
     sub rdx, stdata
+    add rdx, 2
     mov rcx, revbuf
     dec rcx
 
@@ -65,15 +79,9 @@ _rev:
     cmp rbx, stdata
     jge _rev
 
-    inc rcx
-    mov byte [rcx], 0
+    mov byte [rcx+1], 10
+    mov byte [rcx+2], 0
     mov rsi, revbuf
     syscall
 
-    mov rax, 1
-    mov rdi, 1
-    mov rdx, 1
-    mov rsi, endln
-    syscall
-    
     jmp _read
