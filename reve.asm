@@ -36,16 +36,17 @@ _read:
     syscall
 
     mov rbx, stdata
-    dec rbx 
+    mov rdx, BUF_LEN
+    add rdx, stdata
+
 _len:
-    inc rbx
     mov cl, [rbx]
     cmp cl, 10
     je _cleanbuf
-    mov rdx, BUF_LEN
-    add rdx, stdata
+
+    inc rbx
     cmp rbx, rdx
-    jl _len
+    jle _len
     
 _cleanbuf:
     mov rdx, rbx
@@ -68,19 +69,18 @@ _init_rev:
     sub rdx, stdata
     add rdx, 2
     mov rcx, revbuf
-    dec rcx
 
 _rev:
     dec rbx
-    inc rcx
 
     mov rsi, [rbx]
     mov [rcx], rsi
+    inc rcx
     cmp rbx, stdata
     jge _rev
 
-    mov byte [rcx+1], 10
-    mov byte [rcx+2], 0
+    mov byte [rcx], 10
+    mov byte [rcx+1], 0
     mov rsi, revbuf
     syscall
 
