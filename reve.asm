@@ -1,12 +1,14 @@
-BUF_LEN equ 4096
+BUF_LEN  equ 4096
+NEW_LN   equ 10
+O_CREAT  equ 64
+O_RDONLY equ 0   
     
 section .data
-    endln db 10
 
 section .bss
     stdata resb BUF_LEN
     revbuf resb BUF_LEN
-    cbbuf resb 8
+    cbbuf resb 1
    
 section .text
     global _start
@@ -28,9 +30,30 @@ _exit:
     ret
     
 _start:
+    pop rax
+    cmp rax, 1
+    mov r8, 0
+    je _read
 
+    pop rax
+
+
+_read_args    
+    pop rdi
+
+    mov rax, 2
+    mov rsi, O_RDONLY
+    syscall
+    
+    mov r8, rax
+    mov rax, 0
+    jmp _read_file
+    
 _read:  
     call _sys_read_init
+    jmp _read_data
+_read_file:
+_read_data: 
     mov rsi, stdata
     mov rdx, BUF_LEN
     syscall
@@ -41,7 +64,7 @@ _read:
 
 _len:
     mov cl, [rbx]
-    cmp cl, 10
+    cmp cl, NEW_LN
     je _cleanbuf
 
     inc rbx
@@ -60,7 +83,7 @@ _cbloop:
     mov rdx, 1
     syscall
 
-    cmp byte [cbbuf], 10
+    cmp byte [cbbuf], NEW_LN
     jne _cbloop
 
 _init_rev:  
@@ -79,9 +102,10 @@ _rev:
     cmp rbx, stdata
     jge _rev
 
-    mov byte [rcx], 10
+    mov byte [rcx], NEW_LN
     mov byte [rcx+1], 0
     mov rsi, revbuf
     syscall
 
     jmp _read
+    call _exit
