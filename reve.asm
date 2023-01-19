@@ -30,41 +30,43 @@ _exit:
     ret
     
 _start:
+    pop r8
     pop rax
-    cmp rax, 1
-    mov r8, 0
+    xor r10, r10
+    and rdi, r10
+    cmp r8, 1
     je _read
 
-    pop rax
-
-
-_read_args    
+_read_args: 
     pop rdi
 
     mov rax, 2
     mov rsi, O_RDONLY
     syscall
     
-    mov r8, rax
-    mov rax, 0
-    jmp _read_file
+    mov rdi, rax
+    mov r10, rax
+    cmp rdi, -1
+    jne _read
+
+    call _exit
     
 _read:  
-    call _sys_read_init
-    jmp _read_data
-_read_file:
-_read_data: 
+    mov rdi, r10
+    xor rax, rax
     mov rsi, stdata
     mov rdx, BUF_LEN
     syscall
 
     mov rbx, stdata
-    mov rdx, BUF_LEN
-    add rdx, stdata
+    add rbx, rax
+    mov byte [rbx], 0
+    mov rbx, stdata
+    mov rdx, BUF_LEN + stdata
 
 _len:
     mov cl, [rbx]
-    cmp cl, NEW_LN
+    cmp cl, 0
     je _cleanbuf
 
     inc rbx
@@ -89,8 +91,7 @@ _cbloop:
 _init_rev:  
     call _sys_write_init
     mov rdx, rbx
-    sub rdx, stdata
-    add rdx, 2
+    sub rdx, stdata - 2
     mov rcx, revbuf
 
 _rev:
@@ -106,6 +107,6 @@ _rev:
     mov byte [rcx+1], 0
     mov rsi, revbuf
     syscall
-
+    
     jmp _read
     call _exit
