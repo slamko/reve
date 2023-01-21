@@ -1,4 +1,4 @@
-BUF_LEN  equ 4096
+BUF_LEN  equ 0x1000
 NEW_LN   equ 10
 O_CREAT  equ 64
 O_RDONLY equ 0   
@@ -32,8 +32,7 @@ _exit:
 _start:
     pop r8
     pop rax
-    xor r10, r10
-    and rdi, r10
+    xor rdi, rdi
     cmp r8, 1
     je _read
 
@@ -41,32 +40,37 @@ _read_args:
     pop rdi
 
     mov rax, 2
-    mov rsi, O_RDONLY
+    mov rsi, 0
     syscall
     
+    push rax
     mov rdi, rax
-    mov r10, rax
     cmp rdi, -1
     jne _read
 
     call _exit
     
+    push 0
 _read:  
-    mov rdi, r10
     xor rax, rax
+    pop rdi
+    push rdi
     mov rsi, stdata
     mov rdx, BUF_LEN
     syscall
 
-    mov rbx, stdata
-    add rbx, rax
-    mov byte [rbx], 0
+    mov rax, 1
+    mov rdx, BUF_LEN
+    mov rsi, 1
+    mov rdi, stdata
+    syscall
+
     mov rbx, stdata
     mov rdx, BUF_LEN + stdata
 
 _len:
     mov cl, [rbx]
-    cmp cl, 0
+    cmp cl, NEW_LN
     je _cleanbuf
 
     inc rbx
