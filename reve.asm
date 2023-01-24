@@ -2,12 +2,14 @@ BUF_LEN  equ 0x1000
 NEW_LN   equ 10
 O_CREAT  equ 64
 O_RDONLY equ 0   
+SYS_EXIT equ 60
     
 section .data
 
 section .bss
     stdata resb BUF_LEN
     revbuf resb BUF_LEN
+    st_pos resq 1
     cbbuf resb 1
    
 section .text
@@ -23,17 +25,17 @@ _sys_read_init:
     mov rdi, 0
     ret
 
-_exit:
-    mov rax, 60
+_mexit: 
+    mov rax, SYS_EXIT
     mov rdi, 0
     syscall
     ret
     
 _start:
-    pop r8
+    pop r12
     pop rax
     xor rdi, rdi
-    cmp r8, 1
+    cmp r12, 1
     je _read
 
 _read_args: 
@@ -48,7 +50,7 @@ _read_args:
     cmp rdi, -1
     jne _read
 
-    call _exit
+    jmp _exit
     
     push 0
 _read:  
@@ -59,15 +61,13 @@ _read:
     mov rdx, BUF_LEN
     syscall
 
-    mov rax, 1
-    mov rdx, BUF_LEN
-    mov rsi, 1
-    mov rdi, stdata
-    syscall
-
     mov rbx, stdata
-    mov rdx, BUF_LEN + stdata
+    add rbx, rax
+    mov byte [rbx], 0
+    mov rbx, stdata
 
+_get_len:   
+    mov rdx, BUF_LEN + stdata
 _len:
     mov cl, [rbx]
     cmp cl, NEW_LN
@@ -78,6 +78,7 @@ _len:
     jle _len
     
 _cleanbuf:
+    mov [st_pos], rbx
     mov rdx, rbx
     sub rdx, stdata
     cmp rdx, BUF_LEN
@@ -111,6 +112,20 @@ _rev:
     mov byte [rcx+1], 0
     mov rsi, revbuf
     syscall
-    
+
+    cmp r12, 1
+    je _restart
+
+    inc qword [st_pos]
+    mov qword rbx, [st_pos]
+
+    cmp byte [rbx], 0
+    je _exit
+
+    inc rbx
+    jmp _get_len
+
+_restart:   
     jmp _read
-    call _exit
+_exit:  
+    call _mexit
