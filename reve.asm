@@ -3,7 +3,10 @@ NEW_LN   equ 10
 O_CREAT  equ 64
 O_RDONLY equ 0   
 SYS_EXIT equ 60
-FIRST_T_CODE equ 777
+ERR_CODE equ -1
+
+;; magic number
+FIRST_LN equ 0xf7f7f7
     
 section .data
 
@@ -35,28 +38,33 @@ _mexit:
     
 _start:
     pop r12
+    mov r13, r12
     pop rax
     xor rdi, rdi
     mov qword [prev_pos], stdata
+    push 0
     cmp r12, 1
     je _read
 
 _read_args: 
+    dec r13
+    jz _exit
+    
+    pop rdi
     pop rdi
 
-    mov r14, 77
+    mov r14, FIRST_LN
     mov rax, 2
     mov rsi, 0
     syscall
     
     push rax
     mov rdi, rax
-    cmp rdi, -1
+    cmp rdi, ERR_CODE
     jne _read
 
     jmp _exit
     
-    push 0
 _read:  
     xor rax, rax
     pop rdi
@@ -120,27 +128,28 @@ _fin_line:
     mov byte [rcx+1], 0
     mov rsi, revbuf
 
-    lea rdx, [st_pos-prev_pos-1]
-    cmp r14, 77
+    mov rdx, [st_pos]
+    sub rdx, [prev_pos]
+    cmp qword r14, FIRST_LN
     jne _s_call
-    inc rdx
+    add rdx, 2
 _s_call:    
     syscall
 
     xor r14, r14
     cmp r12, 1
-    je _restart
+    je _restart_io
 
     mov qword rbx, [st_pos]
     mov qword [prev_pos], rbx
     inc rbx
 
     cmp byte [rbx], 0
-    je _exit
+    je _read_args
 
     jmp _get_len
 
-_restart:   
+_restart_io:   
     jmp _read
 _exit:  
    call _mexit
