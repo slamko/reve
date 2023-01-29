@@ -32,7 +32,6 @@ _sys_read_init:
 
 _mexit: 
     mov rax, SYS_EXIT
-    mov rdi, 0
     syscall
     ret
     
@@ -41,7 +40,6 @@ _start:
     mov r13, r12
     pop rax
     xor rdi, rdi
-    mov qword [prev_pos], stdata
     push 0
     cmp r12, 1
     je _read
@@ -53,6 +51,7 @@ _read_args:
     pop rdi
     pop rdi
 
+    mov qword [prev_pos], stdata
     mov r14, FIRST_LN
     mov rax, 2
     mov rsi, 0
@@ -60,10 +59,10 @@ _read_args:
     
     push rax
     mov rdi, rax
-    cmp rdi, ERR_CODE
-    jne _read
+    cmp rdi, 0
+    jge _read
 
-    jmp _exit
+    call _mexit
     
 _read:  
     xor rax, rax
@@ -152,4 +151,5 @@ _s_call:
 _restart_io:   
     jmp _read
 _exit:  
+   mov rdi, 0
    call _mexit
