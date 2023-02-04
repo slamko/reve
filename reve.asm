@@ -1,4 +1,4 @@
-BUF_LEN  equ 0x1000
+BUF_LEN  equ 0x10
 NEW_LN   equ 10
 O_CREAT  equ 64
 O_RDONLY equ 0   
@@ -26,8 +26,8 @@ _sys_write_init:
     ret
 
 _sys_read_init:
-    mov rax, 0
-    mov rdi, 0
+    xor rax, rax
+    xor rdi, rdi
     ret
 
 _mexit: 
@@ -51,8 +51,6 @@ _read_args:
     pop rdi
     pop rdi
 
-    mov qword [prev_pos], stdata
-    mov r14, FIRST_LN
     mov rax, 2
     mov rsi, 0
     syscall
@@ -65,9 +63,11 @@ _read_args:
     call _mexit
     
 _read:  
+    xor r14, r14
+    mov qword [prev_pos], stdata
+
     xor rax, rax
-    pop rdi
-    push rdi
+    mov rdi, [rsp]
     mov rsi, stdata
     mov rdx, BUF_LEN
     syscall
@@ -86,17 +86,22 @@ _len:
 
     inc rbx
     cmp rbx, rdx
-    jle _len
+    jl _len
     
 _cleanbuf:
+    inc rbx
     mov [st_pos], rbx
     mov rdx, rbx
     sub rdx, stdata
-    cmp rdx, BUF_LEN
-    jl _init_rev
+    cmp byte [rbx], NEW_LN
+    je _init_rev
+
+    cmp qword [rsp], 2
+    jge _init_rev
 
 _cbloop:
-    call _sys_read_init
+    xor rax, rax
+    xor rdi, rdi
     mov rsi, cbbuf
     mov rdx, 1
     syscall
@@ -108,6 +113,7 @@ _init_rev:
     mov rdx, rbx
     sub rdx, stdata - 2
     mov rcx, revbuf
+    xor rax, rax
 
 _rev:
     dec rbx
@@ -120,28 +126,35 @@ _rev:
 
     cmp byte [rbx], 10
     jne _rev
+
+    inc rax
+    cmp rax, 1
+    jle _rev
     
 _fin_line:  
     call _sys_write_init
-    mov byte [rcx], NEW_LN
-    mov byte [rcx+1], 0
+    mov byte [rcx], 0
     mov rsi, revbuf
 
     mov rdx, [st_pos]
     sub rdx, [prev_pos]
-    cmp qword r14, FIRST_LN
-    jne _s_call
-    add rdx, 2
+    test r14, r14
+    jnz _s_call
+    add rdx, 1
+
 _s_call:    
     syscall
 
-    xor r14, r14
+    inc r14
     cmp r12, 1
     je _restart_io
 
     mov qword rbx, [st_pos]
     mov qword [prev_pos], rbx
-    inc rbx
+
+    mov rdx, stdata + BUF_LEN
+    cmp rbx, rdx
+    jge _read
 
     cmp byte [rbx], 0
     je _read_args
