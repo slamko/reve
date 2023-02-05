@@ -5,10 +5,8 @@ O_RDONLY equ 0
 SYS_EXIT equ 60
 ERR_CODE equ -1
 
-;; magic number
-FIRST_LN equ 0xf7f7f7
-    
 section .data
+    some db "H: ", 0
 
 section .bss
     stdata resb BUF_LEN
@@ -25,15 +23,14 @@ _sys_write_init:
     mov rdi, 1
     ret
 
-_sys_read_init:
-    xor rax, rax
-    xor rdi, rdi
-    ret
-
 _mexit: 
     mov rax, SYS_EXIT
     syscall
     ret
+
+
+
+
     
 _start:
     pop r12
@@ -47,7 +44,6 @@ _start:
 _read_args: 
     dec r13
     jz _exit
-    
     pop rdi
     pop rdi
 
@@ -63,6 +59,7 @@ _read_args:
     call _mexit
     
 _read:  
+ 
     xor r14, r14
     mov qword [prev_pos], stdata
 
@@ -73,10 +70,12 @@ _read:
     syscall
 
     mov rbx, stdata
+    mov r15, rax
     add rbx, rax
     mov byte [rbx], 0
     mov rbx, stdata
 
+   
 _get_len:   
     mov rdx, BUF_LEN + stdata
 _len:
@@ -87,7 +86,17 @@ _len:
     inc rbx
     cmp rbx, rdx
     jl _len
-    
+
+    mov rax, 8
+    mov rdi, [rsp]
+    mov rsi, [prev_pos]
+    sub rsi, stdata
+    sub rsi, r15
+    mov rdx, 1
+    syscall
+
+    jmp _read
+
 _cleanbuf:
     inc rbx
     mov [st_pos], rbx
@@ -133,7 +142,7 @@ _rev:
     
 _fin_line:  
     call _sys_write_init
-    mov byte [rcx], 0
+    mov byte [rcx], NEW_LN
     mov rsi, revbuf
 
     mov rdx, [st_pos]
