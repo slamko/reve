@@ -47,6 +47,7 @@ _read_args:
     pop rdi
     pop rdi
 
+    xor r14, r14
     mov rax, 2
     mov rsi, 0
     syscall
@@ -59,8 +60,6 @@ _read_args:
     call _mexit
     
 _read:  
- 
-    xor r14, r14
     mov qword [prev_pos], stdata
 
     xor rax, rax
@@ -127,8 +126,8 @@ _init_rev:
 _rev:
     dec rbx
 
-    mov dl, [rbx]
-    mov [rcx], dl
+    mov byte dl, [rbx]
+    mov byte [rcx], dl
     inc rcx
     cmp rbx, [prev_pos]
     jl _fin_line
@@ -150,6 +149,7 @@ _fin_line:
     test r14, r14
     jnz _s_call
     add rdx, 1
+    mov byte [revbuf], 0
 
 _s_call:    
     syscall
@@ -166,9 +166,14 @@ _s_call:
     jge _read
 
     cmp byte [rbx], 0
-    je _read_args
-
-    jmp _get_len
+    jne _get_len
+    
+    call _sys_write_init
+    mov rsi, NEW_LN
+    mov rdx, 1
+    syscall
+    
+    jmp _read_args
 
 _restart_io:   
     jmp _read
