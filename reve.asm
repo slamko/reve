@@ -1,4 +1,4 @@
-BUF_LEN  equ 0x10
+BUF_LEN  equ 0x1000
 NEW_LN   equ 10
 O_CREAT  equ 64
 O_RDONLY equ 0   
@@ -6,7 +6,7 @@ SYS_EXIT equ 60
 ERR_CODE equ -1
 
 section .data
-    some db "H: ", 0
+    new_ln db 10, 0
 
 section .bss
     stdata resb BUF_LEN
@@ -101,11 +101,11 @@ _cleanbuf:
     mov [st_pos], rbx
     mov rdx, rbx
     sub rdx, stdata
-    cmp byte [rbx], NEW_LN
+    cmp byte [rbx-1], NEW_LN
     je _init_rev
 
-    cmp qword [rsp], 2
-    jge _init_rev
+    cmp qword [rsp], 1
+    jg _init_rev
 
 _cbloop:
     xor rax, rax
@@ -141,7 +141,7 @@ _rev:
     
 _fin_line:  
     call _sys_write_init
-    mov byte [rcx], NEW_LN
+    mov byte [rcx], 0
     mov rsi, revbuf
 
     mov rdx, [st_pos]
@@ -168,15 +168,17 @@ _s_call:
     cmp byte [rbx], 0
     jne _get_len
     
-    call _sys_write_init
-    mov rsi, NEW_LN
-    mov rdx, 1
-    syscall
-    
+      
     jmp _read_args
 
 _restart_io:   
     jmp _read
 _exit:  
+    mov rax, 1
+    mov rdi, 1
+   mov rsi, new_ln
+   mov rdx, 1
+   syscall
+      
    mov rdi, 0
    call _mexit
