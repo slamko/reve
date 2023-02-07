@@ -1,12 +1,12 @@
 BUF_LEN  equ 0x1000
-NEW_LN   equ 10
+NEW_LN   equ 0xA
 O_CREAT  equ 64
 O_RDONLY equ 0   
 SYS_EXIT equ 60
 ERR_CODE equ -1
 
 section .data
-    new_ln db 10, 0
+    new_ln db 0xA, 0
 
 section .bss
     stdata resb BUF_LEN
@@ -18,23 +18,27 @@ section .bss
 section .text
     global _start
 
-_sys_write_init:
+%macro _sys_write 2
     mov rax, 1
     mov rdi, 1
-    ret
-
-_mexit: 
-    mov rax, SYS_EXIT
+    mov rsi, %1
+    mov rdx, %2
     syscall
-    ret
+%endmacro
+
+%macro _mexit 1
+    mov rax, SYS_EXIT
+    mov rdi, %1
+    syscall
+%endmacro
 
 
-
-
+    ;;  start
     
 _start:
     pop r12
     mov r13, r12
+    mov r14, 1
     pop rax
     xor rdi, rdi
     push 0
@@ -57,7 +61,7 @@ _read_args:
     cmp rdi, 0
     jge _read
 
-    call _mexit
+    _mexit 1
     
 _read:  
     mov qword [prev_pos], stdata
@@ -140,16 +144,18 @@ _rev:
     jle _rev
     
 _fin_line:  
-    call _sys_write_init
-    mov byte [rcx], 0
+    mov rax, 1
+    mov rdi, 1
+    mov byte [rcx], NEW_LN
     mov rsi, revbuf
 
     mov rdx, [st_pos]
     sub rdx, [prev_pos]
+    add rdx, 1
+    mov byte [revbuf], 0
     test r14, r14
     jnz _s_call
     add rdx, 1
-    mov byte [revbuf], 0
 
 _s_call:    
     syscall
@@ -167,18 +173,14 @@ _s_call:
 
     cmp byte [rbx], 0
     jne _get_len
-    
       
     jmp _read_args
 
 _restart_io:   
+    _sys_write new_ln, 1
     jmp _read
 _exit:  
-    mov rax, 1
-    mov rdi, 1
-   mov rsi, new_ln
-   mov rdx, 1
-   syscall
-      
-   mov rdi, 0
-   call _mexit
+    
+    mov rdi, 0
+    _mexit 0
+    
